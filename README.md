@@ -7,3 +7,9 @@
 3. `npm run dev`
 
 Sem bibliotecas de animação: tudo com IntersectionObserver, scroll + requestAnimationFrame e CSS.
+
+## Publicação no GitHub Pages
+
+No repositório, abra **Settings → Pages** e selecione **GitHub Actions** como fonte de publicação. Depois disso, cada push na branch `main` executa o workflow `.github/workflows/deploy.yml`.
+
+O site será publicado em https://geraldo-b-neto.github.io/As-Cores-Que-Vejo/.
