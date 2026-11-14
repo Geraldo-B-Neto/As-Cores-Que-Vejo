@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { COT, IMG } from "./assets";
 import { easeInOut, prefersReducedMotion, useScrollVar } from "./hooks";
 import { Fly, Marquee, Mask, Pill, Reveal, SplitText } from "./ui";
-import { useLightbox } from "./App";
+import { useGalleryNav, useLightbox } from "./App";
 
 const CAPTION =
   "A natureza é o meio mais próximo que temos de poder ver a beleza desse mundo aonde o homem ainda não comrrompeu.";
@@ -86,6 +86,7 @@ export function CollageZoom() {
   const ref = useRef(null);
   const [entered, setEntered] = useState(false);
   const openLb = useLightbox();
+  const { openGallery } = useGalleryNav();
   useScrollVar(ref, zoomCurve);
 
   // entra: dispara a animação das imagens quando a seção aparece
@@ -136,7 +137,7 @@ export function CollageZoom() {
               PARA NATUREZA
             </h2>
             <p>A natureza é o meio mais próximo que temos de poder ver a beleza desse mundo aonde o homem ainda não comrrompeu.</p>
-            <Pill href="#sentimentos">Contemple algumas</Pill>
+            <Pill onClick={() => openGallery("natureza")}>Contemple algumas</Pill>
           </figcaption>
         </figure>
       </div>
@@ -157,6 +158,7 @@ export function TextMarquee() {
    Imagens "despojadas": rotações, cantos diferentes, parallax e flutuação lenta. */
 export function Feelings() {
   const openLb = useLightbox();
+  const { openGallery } = useGalleryNav();
   return (
     <section className="feel" id="sentimentos">
       <div className="feel__text">
@@ -167,7 +169,7 @@ export function Feelings() {
         />
         <Reveal as="p" delay={0.5}>{CAPTION}</Reveal>
         <Reveal delay={0.7}>
-          <Pill tone="dark" href="#essencia">Contemple algumas</Pill>
+          <Pill tone="dark" onClick={() => openGallery("natureza")}>Contemple algumas</Pill>
         </Reveal>
       </div>
 
@@ -190,6 +192,7 @@ const SWAP_IMAGES = [IMG.n13, IMG.n4, IMG.n16, IMG.n5, IMG.n15];
 
 function Swapper({ images, interval = 2400 }) {
   const [s, setS] = useState({ cur: 0, prev: -1 });
+  const openLb = useLightbox();
 
   useEffect(() => {
     if (prefersReducedMotion()) return;
@@ -201,12 +204,19 @@ function Swapper({ images, interval = 2400 }) {
   }, [images.length, interval]);
 
   return (
-    <span className="swap" aria-hidden="true">
+    <span
+      className="swap lb-trigger"
+      aria-label="Abrir imagem da essência"
+      role="button"
+      tabIndex={0}
+      onClick={() => openLb && openLb(images[s.cur], "Essência")}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") openLb && openLb(images[s.cur], "Essência"); }}
+    >
       {images.map((src, i) => (
         <img
           key={src}
           src={src}
-          alt=""
+          alt="Foto da essência"
           className={`swap__img ${i === s.cur ? "is-cur" : ""} ${i === s.prev ? "is-prev" : ""}`}
         />
       ))}
@@ -252,32 +262,17 @@ const SLIDES = [
 function Carousel({ slides }) {
   const n = slides.length;
   const [i, setI] = useState(0);
-  const [drag, setDrag] = useState(0);
-  const [dragging, setDragging] = useState(false);
   const [paused, setPaused] = useState(false);
-  const startX = useRef(0);
   const openLb = useLightbox();
 
   const go = useCallback((d) => setI((c) => (c + d + n) % n), [n]);
 
   useEffect(() => {
-    if (paused || dragging || prefersReducedMotion()) return;
+    if (paused || prefersReducedMotion()) return;
     const id = setInterval(() => go(1), 4500);
     return () => clearInterval(id);
-  }, [paused, dragging, go]);
+  }, [paused, go]);
 
-  const onDown = (e) => {
-    startX.current = e.clientX;
-    setDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onMove = (e) => dragging && setDrag(e.clientX - startX.current);
-  const onEnd = () => {
-    if (!dragging) return;
-    if (Math.abs(drag) > 50) go(drag < 0 ? 1 : -1);
-    setDrag(0);
-    setDragging(false);
-  };
   const onKey = (e) => {
     if (e.key === "ArrowRight") go(1);
     if (e.key === "ArrowLeft") go(-1);
@@ -288,23 +283,19 @@ function Carousel({ slides }) {
       className="carousel"
       role="region"
       aria-roledescription="carrossel"
-      aria-label="O verde e o sol"
+      aria-label="Galeria de fotografias"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       <div
-        className={`carousel__viewport ${dragging ? "is-dragging" : ""}`}
+        className="carousel__viewport"
         tabIndex={0}
         onKeyDown={onKey}
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onEnd}
-        onPointerCancel={onEnd}
       >
         <div
           className="carousel__track"
           style={{
-            transform: `translateX(calc(${drag}px - (var(--sw) / 2 + ${i} * (var(--sw) + var(--gap)))))`,
+            transform: `translateX(calc(-1 * (var(--sw) / 2 + ${i} * (var(--sw) + var(--gap)))))`,
           }}
         >
           {slides.map((s, idx) => (
@@ -318,7 +309,7 @@ function Carousel({ slides }) {
                 alt={s.alt}
                 draggable={false}
                 className="lb-trigger"
-                onClick={() => !dragging && openLb(s.img, s.alt)}
+                onClick={() => openLb && openLb(s.img, s.caption || s.alt)}
               />
               <figcaption>{s.caption}</figcaption>
             </figure>
@@ -351,6 +342,7 @@ function Carousel({ slides }) {
 }
 
 export function Verde() {
+  const { openGallery } = useGalleryNav();
   return (
     <section className="verde">
       <Marquee className="verde__bg" speed={40} reverse>
@@ -361,7 +353,7 @@ export function Verde() {
         <Carousel slides={SLIDES} />
       </Reveal>
       <Reveal delay={0.3} className="verde__cta">
-        <Pill href="#contato">Contemple algumas</Pill>
+        <Pill onClick={() => openGallery("natureza")}>Contemple algumas</Pill>
       </Reveal>
     </section>
   );
@@ -379,12 +371,14 @@ export function Footer() {
         </Reveal>
         <Reveal delay={0.2} className="foot__contact">
           <p>CONTATO</p>
-          <p>Whatssap - 34 9 2000 - 9882</p>
+          <p>Whatsapp — 34 9 2000-9882</p>
           <p>@ascoresquevejo</p>
           <p>@geraldobrunoreisdesiqueiraneto</p>
         </Reveal>
       </div>
-      <SplitText lines={["AS CORES QUE VEJO"]} as="p" className="foot__big" step={0.035} />
+      <div className="foot__title-wrap">
+        <SplitText lines={["AS CORES QUE VEJO"]} as="h2" className="foot__big" step={0.035} />
+      </div>
     </footer>
   );
 }
@@ -424,6 +418,7 @@ export function CotidianoCollageZoom() {
   const ref = useRef(null);
   const [entered, setEntered] = useState(false);
   const openLb = useLightbox();
+  const { openGallery } = useGalleryNav();
   useScrollVar(ref, zoomCurve);
 
   useEffect(() => {
@@ -461,7 +456,7 @@ export function CotidianoCollageZoom() {
               PARA O COTIDIANO
             </h2>
             <p>{CAPTION_COT}</p>
-            <Pill href="#cotidiano-sentimentos">Contemple algumas</Pill>
+            <Pill onClick={() => openGallery("cotidiano")}>Contemple algumas</Pill>
           </figcaption>
         </figure>
       </div>
@@ -481,6 +476,7 @@ export function CotidianoMarquee() {
 /* ───────────── COTIDIANO: Feelings ───────────── */
 export function CotidianoFeelings() {
   const openLb = useLightbox();
+  const { openGallery } = useGalleryNav();
   return (
     <section className="feel" id="cotidiano-sentimentos">
       <div className="feel__text">
@@ -491,7 +487,7 @@ export function CotidianoFeelings() {
         />
         <Reveal as="p" delay={0.5}>{CAPTION_COT}</Reveal>
         <Reveal delay={0.7}>
-          <Pill tone="dark" href="#cotidiano-essencia">Contemple algumas</Pill>
+          <Pill tone="dark" onClick={() => openGallery("cotidiano")}>Contemple algumas</Pill>
         </Reveal>
       </div>
 
@@ -548,6 +544,7 @@ const COT_SLIDES = [
 ];
 
 export function CotidianoCarousel() {
+  const { openGallery } = useGalleryNav();
   return (
     <section className="verde">
       <Marquee className="verde__bg" speed={40} reverse>
@@ -558,7 +555,7 @@ export function CotidianoCarousel() {
         <Carousel slides={COT_SLIDES} />
       </Reveal>
       <Reveal delay={0.3} className="verde__cta">
-        <Pill href="#contato">Contemple algumas</Pill>
+        <Pill onClick={() => openGallery("cotidiano")}>Contemple algumas</Pill>
       </Reveal>
     </section>
   );

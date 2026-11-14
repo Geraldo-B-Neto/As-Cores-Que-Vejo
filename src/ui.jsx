@@ -16,7 +16,7 @@ export function Mask({ as: Tag = "span", active, delay = 0, className = "", chil
  * com atraso crescente quando o título entra na tela.
  */
 export function SplitText({ lines, as: Tag = "h2", className = "", delay = 0, step = 0.03 }) {
-  const [ref, seen] = useInView({ threshold: 0.35 });
+  const [ref, seen] = useInView({ threshold: 0.02, rootMargin: "80px 0px 80px 0px" });
   let n = 0;
   return (
     <Tag ref={ref} className={`split ${seen ? "in" : ""} ${className}`} aria-label={lines.join(" ")}>
@@ -105,9 +105,21 @@ export function Arrow() {
   );
 }
 
-export function Pill({ children = "Contemple algumas", tone = "light", href = "#" }) {
+export function Pill({ children = "Contemple algumas", tone = "light", href, onClick }) {
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={`pill pill--${tone}`}
+        onClick={onClick}
+      >
+        <span>{children}</span>
+        <Arrow />
+      </button>
+    );
+  }
   return (
-    <a className={`pill pill--${tone}`} href={href}>
+    <a className={`pill pill--${tone}`} href={href || "#"}>
       <span>{children}</span>
       <Arrow />
     </a>

@@ -5,7 +5,7 @@ export const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** true (uma única vez) quando o elemento entra na tela */
-export function useInView({ threshold = 0.2, rootMargin = "0px 0px -8% 0px" } = {}) {
+export function useInView({ threshold = 0.05, rootMargin = "50px 0px 50px 0px" } = {}) {
   const ref = useRef(null);
   const [seen, setSeen] = useState(false);
 
@@ -16,6 +16,18 @@ export function useInView({ threshold = 0.2, rootMargin = "0px 0px -8% 0px" } = 
       setSeen(true);
       return;
     }
+
+    const checkVisibility = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= (window.innerHeight || document.documentElement.clientHeight) + 50 && rect.bottom >= -50) {
+        setSeen(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkVisibility()) return;
+
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -26,7 +38,20 @@ export function useInView({ threshold = 0.2, rootMargin = "0px 0px -8% 0px" } = 
       { threshold, rootMargin }
     );
     io.observe(el);
-    return () => io.disconnect();
+
+    // Fallback para elementos no final da página (como o footer)
+    const onScroll = () => {
+      if (checkVisibility()) {
+        io.disconnect();
+        window.removeEventListener("scroll", onScroll);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
   }, [seen, threshold, rootMargin]);
 
   return [ref, seen];

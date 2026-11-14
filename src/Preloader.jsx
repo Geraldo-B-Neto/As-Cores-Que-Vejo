@@ -1,71 +1,93 @@
 import { useEffect, useState } from "react";
-import { IMG } from "./assets";
+import { COT, IMG } from "./assets";
 
-const MIN_MS = 2200; // tempo mínimo de preloader
-const BANDS = 5; // 5 faixas, como o grupo de retângulos do Figma
+const POETIC_PHRASES = [
+  "Ajustando o foco...",
+  "Observando as sutilezas...",
+  "Revelando as cores que vejo...",
+];
 
 export default function Preloader({ onExit, onDone }) {
   const [count, setCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const [phraseIdx, setPhraseIdx] = useState(0);
 
   useEffect(() => {
-    let raf = 0;
-    let loaded = false;
     let exited = false;
-    const timers = [];
-    const start = performance.now();
+    const startTime = performance.now();
+    const DURATION = 2200; // Tempo total suave de 2.2s
 
-    // espera todas as imagens carregarem (ou falharem — não trava o site)
-    Promise.all(
-      Object.values(IMG).map(
-        (src) =>
-          new Promise((resolve) => {
-            const im = new Image();
-            im.onload = im.onerror = resolve;
-            im.src = src;
-          })
-      )
-    ).then(() => (loaded = true));
+    // Pré-carrega silenciosamente em background sem travar o contador
+    const allImages = [...Object.values(IMG).slice(0, 3), ...Object.values(COT).slice(0, 2)];
+    allImages.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
 
-    const tick = (now) => {
-      const t = Math.min((now - start) / MIN_MS, 1);
-      const eased = 1 - Math.pow(1 - t, 2);
-      const shown = loaded ? eased : Math.min(eased, 0.9);
-      setCount(Math.round(shown * 100));
+    // Troca frases poéticas durante o loading
+    const phraseInterval = setInterval(() => {
+      setPhraseIdx((prev) => (prev + 1) % POETIC_PHRASES.length);
+    }, 700);
 
-      if (shown >= 1 && !exited) {
+    let rafId;
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / DURATION, 1);
+
+      // Easing suave (easeOutCubic)
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const currentCount = Math.min(Math.round(eased * 100), 100);
+      setCount(currentCount);
+
+      if (progress < 1) {
+        rafId = requestAnimationFrame(animate);
+      } else if (!exited) {
         exited = true;
-        timers.push(
-          setTimeout(() => {
-            setLeaving(true);
-            onExit();
-            timers.push(setTimeout(onDone, 1500));
-          }, 350)
-        );
-        return;
+        clearInterval(phraseInterval);
+        setTimeout(() => {
+          setLeaving(true);
+          onExit();
+          setTimeout(onDone, 950);
+        }, 250);
       }
-      raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
+
+    rafId = requestAnimationFrame(animate);
 
     return () => {
-      cancelAnimationFrame(raf);
-      timers.forEach(clearTimeout);
+      cancelAnimationFrame(rafId);
+      clearInterval(phraseInterval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onExit, onDone]);
 
   return (
     <div className={`pre ${leaving ? "is-leaving" : ""}`} role="status" aria-label="Carregando">
       <div className="pre__bands" aria-hidden="true">
-        {Array.from({ length: BANDS }, (_, i) => (
+        {[0, 1, 2, 3].map((i) => (
           <span key={i} style={{ "--i": i }} />
         ))}
       </div>
+
       <div className="pre__ui">
-        <p className="pre__brand">AS CORES QUE VEJO</p>
-        <p className="pre__count">{String(count).padStart(3, "0")}</p>
-        <span className="pre__bar" style={{ transform: `scaleX(${count / 100})` }} />
+        <div className="pre__top">
+          <p className="pre__brand">PORTFÓLIO CONTEMPLATIVO</p>
+          <span className="pre__dot" />
+        </div>
+
+        <div className="pre__center">
+          <p className="pre__count">{String(count).padStart(3, "0")}</p>
+          <p className="pre__phrase">{POETIC_PHRASES[phraseIdx]}</p>
+        </div>
+
+        <div className="pre__bottom">
+          <div className="pre__line-track">
+            <div className="pre__line-fill" style={{ width: `${count}%` }} />
+          </div>
+          <div className="pre__foot-row">
+            <span>AS CORES QUE VEJO</span>
+            <span>{count}%</span>
+          </div>
+        </div>
       </div>
     </div>
   );

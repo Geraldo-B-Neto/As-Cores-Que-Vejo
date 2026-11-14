@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useGalleryNav } from "./App";
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
+  const { openGallery, isGalleryActive, closeGallery } = useGalleryNav();
 
   /* bloqueia scroll do body quando aberto */
   useEffect(() => {
@@ -17,6 +19,21 @@ export default function Nav() {
   }, []);
 
   const toggle = () => setOpen((v) => !v);
+
+  const handleNavNatureza = () => {
+    setOpen(false);
+    openGallery("natureza");
+  };
+
+  const handleNavCotidiano = () => {
+    setOpen(false);
+    openGallery("cotidiano");
+  };
+
+  const handleNavHome = () => {
+    setOpen(false);
+    closeGallery();
+  };
 
   return (
     <>
@@ -37,26 +54,36 @@ export default function Nav() {
 
         {/* Links centrais */}
         <nav className="nav-overlay__links">
-          <a
-            href="#fotos"
+          {isGalleryActive && (
+            <button
+              type="button"
+              className="nav-overlay__item"
+              onClick={handleNavHome}
+              style={{ "--i": 0 }}
+            >
+              INÍCIO
+            </button>
+          )}
+          <button
+            type="button"
             className="nav-overlay__item"
-            onClick={() => setOpen(false)}
-            style={{ "--i": 0 }}
+            onClick={handleNavNatureza}
+            style={{ "--i": isGalleryActive ? 1 : 0 }}
           >
             NATUREZA
-          </a>
-          <a
-            href="#cotidiano-fotos"
+          </button>
+          <button
+            type="button"
             className="nav-overlay__item"
-            onClick={() => setOpen(false)}
-            style={{ "--i": 1 }}
+            onClick={handleNavCotidiano}
+            style={{ "--i": isGalleryActive ? 2 : 1 }}
           >
             COTIDIANO
-          </a>
+          </button>
         </nav>
 
         {/* Rodapé de contato */}
-        <footer className="nav-overlay__foot" style={{ "--i": 2 }}>
+        <footer className="nav-overlay__foot" style={{ "--i": 3 }}>
           <p>CONTATO</p>
           <p>Whatsapp — 34 9 2000-9882</p>
           <p>@ascoresquevejo</p>
